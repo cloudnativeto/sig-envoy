@@ -1,2 +1,3 @@
-# envoy
-Envoy official doc 官方文档中文版
+# 云原生社区 Envoy SIG
+
+详情见：<https://cloudnative.to/sig-envoy-announcement>
