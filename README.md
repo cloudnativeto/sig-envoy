@@ -7,22 +7,22 @@
 
 1. 安装hugo
 
-```
-1. MacOS
+```bash
 brew install hugo
 ```
 
 2. 克隆社区网站源码
 
-```
+```bash
 git clone https://github.com/cloudnativeto/sig-envoy
 cd sig-envoy
 ```
 
 3. 修改后本地运行
 
-```
+```bash
 hugo server
 ```
 
 ## 贡献指南
+
