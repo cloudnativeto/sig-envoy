@@ -1,0 +1,23 @@
+{
+  "name": "envoyproxy-cn.io",
+  "version": "0.0.1",
+  "description": "envoyproxy cn website",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/envoyproxy-cn/envoyproxy-cn.io.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/envoyproxy-cn/envoyproxy-cn.io/issues"
+  },
+  "homepage": "https://github.com/envoyproxy-cn/envoyproxy-cn.io#readme",
+  "devDependencies": {
+    "autoprefixer": "^9.8.6",
+    "postcss-cli": "^7.1.1"
+  }
+}
