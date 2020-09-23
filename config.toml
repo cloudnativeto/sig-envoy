@@ -1,5 +1,5 @@
-baseURL = "/"
-title = "Envoy中文社区"
+baseURL = "https://cloudnative.to/sig-envoy"
+title = "Envoy SIG"
 
 enableRobotsTXT = true
 
@@ -47,14 +47,14 @@ anchor = "smart"
 [services]
 [services.googleAnalytics]
 # Comment out the next line to disable GA tracking. Also disables the feature described in [params.ui.feedback].
-id = "UA-00000000-0"
+id = "UA-93485976-4"
 
 # Language configuration
 
 [languages]
 [languages.zh]
-title = ""
-description = "致力于Envoy在中国的发展"
+title = "Envoy SIG"
+description = "Envoy SIG"
 languageName ="中文"
 contentDir = "content/zh"
 time_format_default = "2006年1月2日"
@@ -74,7 +74,7 @@ time_format_blog = "2006年1月2日"
 # Everything below this are Site Params
 
 [params]
-copyright = "Envoy中文社区"
+copyright = "云原生社区"
 # privacy_policy = "https://policies.google.com/privacy"
 
 # First one is picked as the Twitter card image if not set on page.
@@ -99,9 +99,9 @@ version = "0.0"
 url_latest_version = "https://example.com"
 
 # Repository configuration (URLs for in-page links to opening issues and suggesting changes)
-github_repo = "https://github.com/envoyproxy-cn/envoyproxy-cn.io"
+github_repo = "https://github.com/cloudnativeto/sig-envoy"
 # An optional link to a related project repo. For example, the sibling repository where your product code lives.
-github_project_repo = "https://github.com/envoyproxy-cn/envoyproxy-cn.io"
+github_project_repo = "https://github.com/cloudnativeto/sig-envoy"
 
 # Specify a value here if your content directory is not in your repo's root directory
 # github_subdir = ""
@@ -124,7 +124,7 @@ breadcrumb_disable = false
 #  Set to true to hide the sidebar search box (the top nav search box will still be displayed if search is enabled)
 sidebar_search_disable = false
 #  Set to false if you don't want to display a logo (/assets/icons/logo.svg) in the top nav bar
-navbar_logo = true
+navbar_logo = false
 # Set to true to disable the About link in the site footer
 footer_about_disable = true
 
@@ -154,14 +154,9 @@ theme = "github-light"
 # End user relevant links. These will show up on left side of footer and in the community page if you have one.
 [[params.links.user]]
 	name = "GitHub"
-	url = "https://github.com/envoyproxy-cn/envoyproxy-cn.io"
+	url = "https://github.com/cloudnativeto/sig-envoy"
 	icon = "fab fa-github"
         desc = "Development takes place here!"
-[[params.links.user]]
-	name = "Slack"
-	url = "https://envoyproxy.slack.com/archives/C018HMZH37F"
-	icon = "fab fa-slack"
-        desc = "Chat with other project developers"
 
 [sitemap]
   changefreq = "daily"
