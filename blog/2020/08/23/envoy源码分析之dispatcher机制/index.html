@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="zh" class="no-js">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="generator" content="Hugo 0.75.1" />
+
+<META NAME="ROBOTS" CONTENT="NOINDEX, NOFOLLOW">
+
+
+
+<link rel="shortcut icon" href="/favicons/favicon.ico" >
+<link rel="apple-touch-icon" href="/sig-envoy/favicons/apple-touch-icon-180x180.png" sizes="180x180">
+<link rel="icon" type="image/png" href="/sig-envoy/favicons/favicon-16x16.png" sizes="16x16">
+<link rel="icon" type="image/png" href="/sig-envoy/favicons/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="/sig-envoy/favicons/android-36x36.png" sizes="36x36">
+<link rel="icon" type="image/png" href="/sig-envoy/favicons/android-48x48.png" sizes="48x48">
+<link rel="icon" type="image/png" href="/sig-envoy/favicons/android-72x72.png" sizes="72x72">
+<link rel="icon" type="image/png" href="/sig-envoy/favicons/android-96x96.png" sizes="96x96">
+<link rel="icon" type="image/png" href="/sig-envoy/favicons/android-144x144.png" sizes="144x144">
+<link rel="icon" type="image/png" href="/sig-envoy/favicons/android-192x192.png" sizes="192x192">
+
+<title>Envoy源码分析之Dispatcher机制 | Envoy SIG</title><meta property="og:title" content="Envoy源码分析之Dispatcher机制" />
+<meta property="og:description" content="Envoy和Nginx一样都是基于事件驱动的架构，这种架构的核心就是事件循环(EventLoop)。业界目前典型的几种事件循环实现主要有Libevent、Libev、Libuv、Boost.Asio等，也可以完全基于Linux系统调用epoll来实现。Envoy选择在Libevent的基础上进行了封装，实现了自己的事件循环机制，在Envoy中被称为`Dispatcher`，一个`Dispatcher`对象就是一个事件分发器，就如同它的名字一样。`Dispatcher`是Envoy的核心，可以说Envoy中绝大部分的能力都是构建在`Dispatcher`的基础上。所以理解`Dispatcher`机制是掌握Envoy的一个很重要的前提。" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://cloudnative.to/sig-envoy/blog/2020/08/23/envoy%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90%E4%B9%8Bdispatcher%E6%9C%BA%E5%88%B6/" />
+<meta property="article:published_time" content="2020-08-23T00:00:00+00:00" />
+<meta property="article:modified_time" content="2020-09-24T12:16:55+08:00" /><meta property="og:site_name" content="Envoy SIG" />
+<meta itemprop="name" content="Envoy源码分析之Dispatcher机制">
+<meta itemprop="description" content="Envoy和Nginx一样都是基于事件驱动的架构，这种架构的核心就是事件循环(EventLoop)。业界目前典型的几种事件循环实现主要有Libevent、Libev、Libuv、Boost.Asio等，也可以完全基于Linux系统调用epoll来实现。Envoy选择在Libevent的基础上进行了封装，实现了自己的事件循环机制，在Envoy中被称为`Dispatcher`，一个`Dispatcher`对象就是一个事件分发器，就如同它的名字一样。`Dispatcher`是Envoy的核心，可以说Envoy中绝大部分的能力都是构建在`Dispatcher`的基础上。所以理解`Dispatcher`机制是掌握Envoy的一个很重要的前提。">
+<meta itemprop="datePublished" content="2020-08-23T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2020-09-24T12:16:55+08:00" />
+<meta itemprop="wordCount" content="588">
+
+
+
+<meta itemprop="keywords" content="" />
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Envoy源码分析之Dispatcher机制"/>
+<meta name="twitter:description" content="Envoy和Nginx一样都是基于事件驱动的架构，这种架构的核心就是事件循环(EventLoop)。业界目前典型的几种事件循环实现主要有Libevent、Libev、Libuv、Boost.Asio等，也可以完全基于Linux系统调用epoll来实现。Envoy选择在Libevent的基础上进行了封装，实现了自己的事件循环机制，在Envoy中被称为`Dispatcher`，一个`Dispatcher`对象就是一个事件分发器，就如同它的名字一样。`Dispatcher`是Envoy的核心，可以说Envoy中绝大部分的能力都是构建在`Dispatcher`的基础上。所以理解`Dispatcher`机制是掌握Envoy的一个很重要的前提。"/>
+
+
+
+
+
+<link rel="preload" href="/sig-envoy/scss/main.min.106faf8918430dc54ff23452809376917bb1354878bb798c94f95c0f873cf514.css" as="style">
+<link href="/sig-envoy/scss/main.min.106faf8918430dc54ff23452809376917bb1354878bb798c94f95c0f873cf514.css" rel="stylesheet" integrity="">
+
+
+  <script src="/js/jquery-3.5.1.min.js"></script>
+
+  <script src="/js/lunr.min.js"></script>
+
+
+
+
+
+  </head>
+  <body class="td-page td-blog">
+    <header>
+      
+<nav class="js-navbar-scroll navbar navbar-expand navbar-dark flex-column flex-md-row td-navbar">
+    <a class="navbar-brand" href="/sig-envoy/">
+        <span class="navbar-logo">
+        <span class="text-uppercase font-weight-bold">Envoy SIG</span> 
+    </a>
+    <div class="td-navbar-nav-scroll ml-md-auto" id="main_navbar">
+        <ul class="navbar-nav mt-2 mt-lg-0">
+             
+            <li class="nav-item mr-4 mb-2 mb-lg-0">
+                     
+                <a class="nav-link" href="/sig-envoy/docs/" >
+                    <span>文档</span>
+                </a>
+            </li>
+            
+            <li class="nav-item mr-4 mb-2 mb-lg-0">
+                     
+                <a class="nav-link active" href="/sig-envoy/blog/" >
+                    <span class="active" >博客</span>
+                </a>
+            </li>
+            
+            <li class="nav-item mr-4 mb-2 mb-lg-0">
+                     
+                <a class="nav-link" href="/sig-envoy/docs/community/" >
+                    <span>社区</span>
+                </a>
+            </li>
+              
+        </ul>
+    </div>
+    <div class="navbar-nav d-none d-lg-block">
+<input type="search" class="form-control td-search-input" placeholder="&#xf002 站内搜索…" aria-label="站内搜索…" autocomplete="off">
+
+</div>
+</nav>
+    </header>
+    <div class="container-fluid td-outer">
+      <div class="td-main">
+        <div class="row flex-xl-nowrap">
+          <div class="col-12 col-md-3 col-xl-2 td-sidebar d-print-none">
+            
+
+
+
+
+<div id="td-sidebar-menu" class="td-sidebar__inner">
+  
+  <form class="td-sidebar__search d-flex align-items-center">
+    
+<input type="search" class="form-control td-search-input" placeholder="&#xf002 站内搜索…" aria-label="站内搜索…" autocomplete="off">
+
+
+    <button class="btn btn-link td-sidebar__toggle d-md-none p-0 ml-3 fas fa-bars" type="button" data-toggle="collapse" data-target="#td-section-nav" aria-controls="td-docs-nav" aria-expanded="false" aria-label="Toggle section navigation">
+    </button>
+  </form>
+  
+  <nav class="collapse td-sidebar-nav" id="td-section-nav">
+    
+    
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/sig-envoy/blog/" class="align-left pl-0 pr-2 td-sidebar-link td-sidebar-link__section">博客</a>
+  </li>
+  <ul>
+    <li class="collapse show" id="sig-envoyblog">
+      
+      
+      
+      
+      
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/sig-envoy/blog/code/" class="align-left pl-0 pr-2 active td-sidebar-link td-sidebar-link__section">源码分析</a>
+  </li>
+  <ul>
+    <li class="collapse show" id="sig-envoyblogcode">
+      
+      
+      
+      
+      
+      
+      <a class="td-sidebar-link td-sidebar-link__page  active" id="m-sig-envoyblog20200823envoye6ba90e7a081e58886e69e90e4b98bdispatchere69cbae588b6" href="/sig-envoy/blog/2020/08/23/envoy%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90%E4%B9%8Bdispatcher%E6%9C%BA%E5%88%B6/">Envoy源码分析之Dispatcher机制</a>
+      
+      
+      
+      
+      
+      <a class="td-sidebar-link td-sidebar-link__page " id="m-sig-envoyblog20200823envoye6ba90e7a081e58886e69e90e4b98bthreadlocale69cbae588b6" href="/sig-envoy/blog/2020/08/23/envoy%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90%E4%B9%8Bthreadlocal%E6%9C%BA%E5%88%B6/">Envoy源码分析之ThreadLocal机制</a>
+      
+      
+    </li>
+  </ul>
+</ul>
+
+      
+      
+      
+      
+      
+      <a class="td-sidebar-link td-sidebar-link__page " id="m-sig-envoyblog20200510e5a682e4bd95e4b8ba-envoy-e69e84e5bbbae4b880e4b8aae68ea7e588b6e99da2e69da5e7aea1e79086e99b86e7bea4e7bd91e7bb9ce6b581e9878f" href="/sig-envoy/blog/2020/05/10/%E5%A6%82%E4%BD%95%E4%B8%BA-envoy-%E6%9E%84%E5%BB%BA%E4%B8%80%E4%B8%AA%E6%8E%A7%E5%88%B6%E9%9D%A2%E6%9D%A5%E7%AE%A1%E7%90%86%E9%9B%86%E7%BE%A4%E7%BD%91%E7%BB%9C%E6%B5%81%E9%87%8F/">如何为 Envoy 构建一个控制面来管理集群网络流量</a>
+      
+      
+    </li>
+  </ul>
+</ul>
+
+  </nav>
+</div>
+
+
+
+
+          </div>
+          <div class="d-none d-xl-block col-xl-2 td-toc d-print-none">
+            
+
+
+
+
+
+
+<div class="td-page-meta ml-2 pb-1 pt-2 mb-0">
+
+
+
+
+
+<a href="https://github.com/cloudnativeto/sig-envoy/edit/master/content/zh/blog/code/dispatcher.md" target="_blank"><i class="fa fa-edit fa-fw"></i> 编辑此页</a>
+<a href="https://github.com/cloudnativeto/sig-envoy/issues/new?title=Envoy%e6%ba%90%e7%a0%81%e5%88%86%e6%9e%90%e4%b9%8bDispatcher%e6%9c%ba%e5%88%b6" target="_blank"><i class="fab fa-github fa-fw"></i> 提交文档问题</a>
+
+
+<a href="https://github.com/cloudnativeto/sig-envoy/issues/new" target="_blank"><i class="fas fa-tasks fa-fw"></i> 提交项目问题</a>
+
+</div>
+
+
+
+
+
+
+
+
+          </div>
+          <main class="col-12 col-md-9 col-xl-8 pl-md-5 pr-md-4" role="main">
+            <a class="btn btn-lg -bg-orange td-rss-button d-none d-lg-block" href="https://cloudnative.to/sig-envoy/blog/code/index.xml" target="_blank">
+              RSS <i class="fa fa-rss ml-2 "></i>
+            </a>
+            
+<div class="td-content">
+	<h1>Envoy源码分析之Dispatcher机制</h1>
+	<div class="lead">Envoy和Nginx一样都是基于事件驱动的架构，这种架构的核心就是事件循环(EventLoop)。业界目前典型的几种事件循环实现主要有Libevent、Libev、Libuv、Boost.Asio等，也可以完全基于Linux系统调用epoll来实现。Envoy选择在Libevent的基础上进行了封装，实现了自己的事件循环机制，在Envoy中被称为<code>Dispatcher</code>，一个<code>Dispatcher</code>对象就是一个事件分发器，就如同它的名字一样。<code>Dispatcher</code>是Envoy的核心，可以说Envoy中绝大部分的能力都是构建在<code>Dispatcher</code>的基础上。所以理解<code>Dispatcher</code>机制是掌握Envoy的一个很重要的前提。</div>
+	<div class="td-byline mb-4">
+		
+		<time datetime="2020-08-23" class="text-muted">2020年8月23日</time>
+	</div>
+	<h1 id="dispatcher机制">Dispatcher机制</h1>
+<p>​	Envoy和Nginx一样都是基于事件驱动的架构，这种架构的核心就是事件循环(EventLoop)。业界目前典型的几种事件循环实现主要有Libevent、Libev、Libuv、Boost.Asio等，也可以完全基于Linux系统调用epoll来实现。Envoy选择在Libevent的基础上进行了封装，实现了自己的事件循环机制，在Envoy中被称为<code>Dispatcher</code>，一个<code>Dispatcher</code>对象就是一个事件分发器，就如同它的名字一样。<code>Dispatcher</code>是Envoy的核心，可以说Envoy中绝大部分的能力都是构建在<code>Dispatcher</code>的基础上。所以理解<code>Dispatcher</code>机制是掌握Envoy的一个很重要的前提。</p>
+<p>​	在Envoy中<code>Dispatcher</code>不仅仅提供了网络事件分发、定时器、信号处理等基本的事件循环能力，还在事件循环的基础上实现任务执行队列、<code>DeferredDelet</code>等，这两个功能为Envoy中很多组件提供了必不可少的基础能力。比如借助<code>DeferredDelet</code>实现了安全的对象析构，通过任务执行队列实现Thread Local机制等等。</p>
+<h1 id="libevent事件封装">Libevent事件封装</h1>
+<p>​	Envoy在Libevent的基础上进行了封装最为重要的一个原因就是因为Libevent本身是C开发的，很多Libevent暴露出来的结构需要自己来管理内存的分配和释放，这对于现代化的C++来说显然是无法接受的，因此Envoy借助了C++的RAII机制将这些结构封装起来，自动管理内存资源的释放。接下来我们看下Envoy是如何进行封装的。</p>
+<div class="highlight"><pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-cpp" data-lang="cpp"><span style="color:#204a87;font-weight:bold">template</span> <span style="color:#ce5c00;font-weight:bold">&lt;</span><span style="color:#204a87;font-weight:bold">class</span> <span style="color:#000">T</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#204a87;font-weight:bold">void</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#000">deleter</span><span style="color:#000;font-weight:bold">)(</span><span style="color:#000">T</span><span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#000;font-weight:bold">)</span><span style="color:#ce5c00;font-weight:bold">&gt;</span>
+<span style="color:#204a87;font-weight:bold">class</span> <span style="color:#000">CSmartPtr</span> <span style="color:#ce5c00;font-weight:bold">:</span> <span style="color:#204a87;font-weight:bold">public</span> <span style="color:#000">std</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">unique_ptr</span><span style="color:#ce5c00;font-weight:bold">&lt;</span><span style="color:#000">T</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#204a87;font-weight:bold">void</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#000;font-weight:bold">)(</span><span style="color:#000">T</span><span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#000;font-weight:bold">)</span><span style="color:#ce5c00;font-weight:bold">&gt;</span> <span style="color:#000;font-weight:bold">{</span>
+<span style="color:#204a87;font-weight:bold">public</span><span style="color:#ce5c00;font-weight:bold">:</span>
+  <span style="color:#000">CSmartPtr</span><span style="color:#000;font-weight:bold">()</span> <span style="color:#ce5c00;font-weight:bold">:</span> <span style="color:#000">std</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">unique_ptr</span><span style="color:#ce5c00;font-weight:bold">&lt;</span><span style="color:#000">T</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#204a87;font-weight:bold">void</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#000;font-weight:bold">)(</span><span style="color:#000">T</span><span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#000;font-weight:bold">)</span><span style="color:#ce5c00;font-weight:bold">&gt;</span><span style="color:#000;font-weight:bold">(</span><span style="color:#204a87;font-weight:bold">nullptr</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">deleter</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#000;font-weight:bold">{}</span>
+  <span style="color:#000">CSmartPtr</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">T</span><span style="color:#ce5c00;font-weight:bold">*</span> <span style="color:#000">object</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#ce5c00;font-weight:bold">:</span> <span style="color:#000">std</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">unique_ptr</span><span style="color:#ce5c00;font-weight:bold">&lt;</span><span style="color:#000">T</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#204a87;font-weight:bold">void</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#000;font-weight:bold">)(</span><span style="color:#000">T</span><span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#000;font-weight:bold">)</span><span style="color:#ce5c00;font-weight:bold">&gt;</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">object</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">deleter</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#000;font-weight:bold">{}</span>
+<span style="color:#000;font-weight:bold">};</span>
+</code></pre></div><p>​	Envoy通过继承<code>unique_ptr</code>自定义了一个<code>CSmartPtr</code>，通过继承拥有了<code>unqiue_ptr</code>自动管理内存释放的能力，离开作用域后自动释放内存。借助<code>CSmartPtr</code>，Envoy将Libevent中的<code>event_base</code>包装成<code>BasePtr</code>，将<code>evconnlistener</code>包装成<code>ListenerPtr</code>。其中<code>event_base</code>就是事件循环，一个<code>event_base</code>就是一个事件循环，可以拥有多个事件循环，Envoy内部就是每一个worker线程都会有一个事件循环，也就是最常见的one loop per thread模型。</p>
+<div class="highlight"><pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-cpp" data-lang="cpp"><span style="color:#204a87;font-weight:bold">using</span> <span style="color:#000">BasePtr</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#000">CSmartPtr</span><span style="color:#ce5c00;font-weight:bold">&lt;</span><span style="color:#000">event_base</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">event_base_free</span><span style="color:#ce5c00;font-weight:bold">&gt;</span><span style="color:#000;font-weight:bold">;</span>
+<span style="color:#204a87;font-weight:bold">using</span> <span style="color:#000">ListenerPtr</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#000">CSmartPtr</span><span style="color:#ce5c00;font-weight:bold">&lt;</span><span style="color:#000">evconnlistener</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">evconnlistener_free</span><span style="color:#ce5c00;font-weight:bold">&gt;</span><span style="color:#000;font-weight:bold">;</span>
+</code></pre></div><p>​	在Libevent中无论是定时器到期、收到信号、还是文件可读写等都是事件，统一使用<code>event</code>类型来表示，Envoy中则将<code>event</code>作为<code>ImplBase</code>的成员，然后让所有的事件类型的对象都继承<code>ImplBase</code>，从而实现了事件的抽象。同时也借助了RAII机制自动实现了事件资源的释放。</p>
+<div class="highlight"><pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-cpp" data-lang="cpp"><span style="color:#204a87;font-weight:bold">class</span> <span style="color:#000">ImplBase</span> <span style="color:#000;font-weight:bold">{</span>
+<span style="color:#204a87;font-weight:bold">protected</span><span style="color:#ce5c00;font-weight:bold">:</span>
+  <span style="color:#ce5c00;font-weight:bold">~</span><span style="color:#000">ImplBase</span><span style="color:#000;font-weight:bold">();</span>
+	
+  <span style="color:#000">event</span> <span style="color:#000">raw_event_</span><span style="color:#000;font-weight:bold">;</span>
+<span style="color:#000;font-weight:bold">};</span>
+
+<span style="color:#000">ImplBase</span><span style="color:#ce5c00;font-weight:bold">::~</span><span style="color:#000">ImplBase</span><span style="color:#000;font-weight:bold">()</span> <span style="color:#000;font-weight:bold">{</span>
+  <span style="color:#8f5902;font-style:italic">// Derived classes are assumed to have already assigned the raw event in the constructor.
+</span><span style="color:#8f5902;font-style:italic"></span>  <span style="color:#000">event_del</span><span style="color:#000;font-weight:bold">(</span><span style="color:#ce5c00;font-weight:bold">&amp;</span><span style="color:#000">raw_event_</span><span style="color:#000;font-weight:bold">);</span>
+<span style="color:#000;font-weight:bold">}</span>
+</code></pre></div><p>​	 通过继承<code>ImplBase</code>基类可以拥有<code>event</code>事件成员，但是每一种事件表现出的具体行为是不一样的，比如说信号事件，需要有信号注册的能力，定时器事件则需要可以开启或者关闭定时的能力，文件事件则需要能够开启某些事件状态的监听。为此Envoy为每一种事件类型都抽象了对应的接口，例如文件事件接口。</p>
+<div class="highlight"><pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-cpp" data-lang="cpp"><span style="color:#204a87;font-weight:bold">class</span> <span style="color:#000">FileEvent</span> <span style="color:#000;font-weight:bold">{</span>
+<span style="color:#204a87;font-weight:bold">public</span><span style="color:#ce5c00;font-weight:bold">:</span>
+  <span style="color:#204a87;font-weight:bold">virtual</span> <span style="color:#ce5c00;font-weight:bold">~</span><span style="color:#000">FileEvent</span><span style="color:#000;font-weight:bold">()</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#204a87;font-weight:bold">default</span><span style="color:#000;font-weight:bold">;</span>
+  <span style="color:#8f5902;font-style:italic">// 激活指定事件，会自动触发对应事件的callback
+</span><span style="color:#8f5902;font-style:italic"></span>  <span style="color:#204a87;font-weight:bold">virtual</span> <span style="color:#204a87;font-weight:bold">void</span> <span style="color:#000">activate</span><span style="color:#000;font-weight:bold">(</span><span style="color:#204a87;font-weight:bold">uint32_t</span> <span style="color:#000">events</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#000">PURE</span><span style="color:#000;font-weight:bold">;</span>
+  <span style="color:#8f5902;font-style:italic">// 开启指定事件状态的监听
+</span><span style="color:#8f5902;font-style:italic"></span>  <span style="color:#204a87;font-weight:bold">virtual</span> <span style="color:#204a87;font-weight:bold">void</span> <span style="color:#000">setEnabled</span><span style="color:#000;font-weight:bold">(</span><span style="color:#204a87;font-weight:bold">uint32_t</span> <span style="color:#000">events</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#000">PURE</span><span style="color:#000;font-weight:bold">;</span>
+<span style="color:#000;font-weight:bold">};</span>
+</code></pre></div><p>​	有了事件基类和对应的接口类后，让我们来看下Envoy如何来实现一个文件事件对象。</p>
+<div class="highlight"><pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-cpp" data-lang="cpp"><span style="color:#8f5902;font-style:italic">// 通过继承ImplBase拥有了event成员
+</span><span style="color:#8f5902;font-style:italic"></span><span style="color:#204a87;font-weight:bold">class</span> <span style="color:#000">FileEventImpl</span> <span style="color:#ce5c00;font-weight:bold">:</span> <span style="color:#204a87;font-weight:bold">public</span> <span style="color:#000">FileEvent</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">ImplBase</span> <span style="color:#000;font-weight:bold">{</span>
+<span style="color:#204a87;font-weight:bold">public</span><span style="color:#ce5c00;font-weight:bold">:</span>
+  <span style="color:#000">FileEventImpl</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">DispatcherImpl</span><span style="color:#ce5c00;font-weight:bold">&amp;</span> <span style="color:#000">dispatcher</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#204a87;font-weight:bold">int</span> <span style="color:#000">fd</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">FileReadyCb</span> <span style="color:#000">cb</span><span style="color:#000;font-weight:bold">,</span> 
+                <span style="color:#000">FileTriggerType</span> <span style="color:#000">trigger</span><span style="color:#000;font-weight:bold">,</span>
+                <span style="color:#204a87;font-weight:bold">uint32_t</span> <span style="color:#000">events</span><span style="color:#000;font-weight:bold">);</span>
+
+  <span style="color:#8f5902;font-style:italic">// Event::FileEvent
+</span><span style="color:#8f5902;font-style:italic"></span>  <span style="color:#8f5902;font-style:italic">// 实现了文件事件的接口，通过这个接口可以实现文件事件的监听
+</span><span style="color:#8f5902;font-style:italic"></span>  <span style="color:#204a87;font-weight:bold">void</span> <span style="color:#000">activate</span><span style="color:#000;font-weight:bold">(</span><span style="color:#204a87;font-weight:bold">uint32_t</span> <span style="color:#000">events</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#204a87;font-weight:bold">override</span><span style="color:#000;font-weight:bold">;</span>
+  <span style="color:#204a87;font-weight:bold">void</span> <span style="color:#000">setEnabled</span><span style="color:#000;font-weight:bold">(</span><span style="color:#204a87;font-weight:bold">uint32_t</span> <span style="color:#000">events</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#204a87;font-weight:bold">override</span><span style="color:#000;font-weight:bold">;</span>
+
+<span style="color:#204a87;font-weight:bold">private</span><span style="color:#ce5c00;font-weight:bold">:</span>
+  <span style="color:#8f5902;font-style:italic">// 初始化事件对象
+</span><span style="color:#8f5902;font-style:italic"></span>  <span style="color:#204a87;font-weight:bold">void</span> <span style="color:#000">assignEvents</span><span style="color:#000;font-weight:bold">(</span><span style="color:#204a87;font-weight:bold">uint32_t</span> <span style="color:#000">events</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">event_base</span><span style="color:#ce5c00;font-weight:bold">*</span> <span style="color:#000">base</span><span style="color:#000;font-weight:bold">);</span>
+	
+  <span style="color:#8f5902;font-style:italic">// 事件触发时执行的callback
+</span><span style="color:#8f5902;font-style:italic"></span>  <span style="color:#000">FileReadyCb</span> <span style="color:#000">cb_</span><span style="color:#000;font-weight:bold">;</span>
+  <span style="color:#8f5902;font-style:italic">// 文件fd
+</span><span style="color:#8f5902;font-style:italic"></span>  <span style="color:#204a87;font-weight:bold">int</span> <span style="color:#000">fd_</span><span style="color:#000;font-weight:bold">;</span>
+  <span style="color:#8f5902;font-style:italic">// 事件触发的类型，边缘触发，还是水平触发
+</span><span style="color:#8f5902;font-style:italic"></span>  <span style="color:#000">FileTriggerType</span> <span style="color:#000">trigger_</span><span style="color:#000;font-weight:bold">;</span>
+<span style="color:#000;font-weight:bold">};</span>
+
+<span style="color:#000">FileEventImpl</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">FileEventImpl</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">DispatcherImpl</span><span style="color:#ce5c00;font-weight:bold">&amp;</span> <span style="color:#000">dispatcher</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#204a87;font-weight:bold">int</span> <span style="color:#000">fd</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">FileReadyCb</span> <span style="color:#000">cb</span><span style="color:#000;font-weight:bold">,</span>
+                             <span style="color:#000">FileTriggerType</span> <span style="color:#000">trigger</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#204a87;font-weight:bold">uint32_t</span> <span style="color:#000">events</span><span style="color:#000;font-weight:bold">)</span>
+    <span style="color:#ce5c00;font-weight:bold">:</span> <span style="color:#000">cb_</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">cb</span><span style="color:#000;font-weight:bold">),</span> <span style="color:#000">fd_</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">fd</span><span style="color:#000;font-weight:bold">),</span> <span style="color:#000">trigger_</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">trigger</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#000;font-weight:bold">{</span>
+<span style="color:#8f5902;font-style:italic">#ifdef WIN32
+</span><span style="color:#8f5902;font-style:italic"></span>  <span style="color:#000">RELEASE_ASSERT</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">trigger_</span> <span style="color:#ce5c00;font-weight:bold">==</span> <span style="color:#000">FileTriggerType</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">Level</span><span style="color:#000;font-weight:bold">,</span>
+                 <span style="color:#4e9a06">&#34;libevent does not support edge triggers on Windows&#34;</span><span style="color:#000;font-weight:bold">);</span>
+<span style="color:#8f5902;font-style:italic">#endif
+</span><span style="color:#8f5902;font-style:italic"></span>  <span style="color:#8f5902;font-style:italic">// dispatcher.base()返回的就是上文中说到的BasePtr，事件循环对象
+</span><span style="color:#8f5902;font-style:italic"></span>  <span style="color:#8f5902;font-style:italic">// 通过assignEvents初始化事件对象，设置好要监听的事件状态，以及事件回调callback等
+</span><span style="color:#8f5902;font-style:italic"></span>  <span style="color:#8f5902;font-style:italic">// 内部调用的就是Libevent的event_assign方法。
+</span><span style="color:#8f5902;font-style:italic"></span>  <span style="color:#000">assignEvents</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">events</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#ce5c00;font-weight:bold">&amp;</span><span style="color:#000">dispatcher</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">base</span><span style="color:#000;font-weight:bold">());</span>
+  <span style="color:#8f5902;font-style:italic">// 将事件对象注册到事件循环中，内部调用的就是
+</span><span style="color:#8f5902;font-style:italic"></span>  <span style="color:#000">event_add</span><span style="color:#000;font-weight:bold">(</span><span style="color:#ce5c00;font-weight:bold">&amp;</span><span style="color:#000">raw_event_</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#204a87;font-weight:bold">nullptr</span><span style="color:#000;font-weight:bold">);</span>
+<span style="color:#000;font-weight:bold">}</span>
+</code></pre></div><p>​	到此为止事件对象的封装就分析完了，接下来看下核心的<code>Dispatcher</code>对象，它提供了几个核心的方法来创建上文中分析的几个事件对象。</p>
+<div class="highlight"><pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-cpp" data-lang="cpp">  <span style="color:#204a87;font-weight:bold">class</span> <span style="color:#000">DispatcherImpl</span> <span style="color:#000;font-weight:bold">{</span>
+   <span style="color:#204a87;font-weight:bold">public</span><span style="color:#ce5c00;font-weight:bold">:</span>
+     <span style="color:#000;font-weight:bold">....</span>
+     <span style="color:#000">FileEventPtr</span> <span style="color:#000">createFileEvent</span><span style="color:#000;font-weight:bold">(</span><span style="color:#204a87;font-weight:bold">int</span> <span style="color:#000">fd</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">FileReadyCb</span> <span style="color:#000">cb</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">FileTriggerType</span> <span style="color:#000">trigger</span><span style="color:#000;font-weight:bold">,</span>
+                                  <span style="color:#204a87;font-weight:bold">uint32_t</span> <span style="color:#000">events</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#204a87;font-weight:bold">override</span><span style="color:#000;font-weight:bold">;</span>
+     <span style="color:#000">TimerPtr</span> <span style="color:#000">createTimer</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">TimerCb</span> <span style="color:#000">cb</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#204a87;font-weight:bold">override</span><span style="color:#000;font-weight:bold">;</span>
+     <span style="color:#000">SignalEventPtr</span> <span style="color:#000">listenForSignal</span><span style="color:#000;font-weight:bold">(</span><span style="color:#204a87;font-weight:bold">int</span> <span style="color:#000">signal_num</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">SignalCb</span> <span style="color:#000">cb</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#204a87;font-weight:bold">override</span><span style="color:#000;font-weight:bold">;</span>
+     <span style="color:#000;font-weight:bold">....</span>
+  <span style="color:#000;font-weight:bold">}</span>
+</code></pre></div><p>​	这就是<code>Dispatcher</code>对象的几个核心方法，在这几个方法的基础上又扩展了<code>createServerConnection</code>、<code>createClientConnection</code>等方法用于创建服务端和客户端连接对象，这两个方法内部最终都调用了<code>createFileEvent</code>方法，将socket文件的事件注册到了事件循环中。到此为止关于<code>Dispatcher</code>事件相关的几个方法都分析完了，但是<code>Dispatcher</code>对象远远还不止这些，比如说本文尚未提到的<code>Scheduler</code>，目前这个部分还尚未完成，这一块是对事件循环的抽象，目前是为了让事件循环组件可替换，目前只有<code>LibeventScheduler</code>一个实现。</p>
+<h1 id="任务执行队列">任务执行队列</h1>
+<pre><code>在上文中曾提到过Envoy在事件循环的基础上实现了两个比较重要的基础功能，其中一个就是任务执行队列了。可以随时通过`post`方法提交多个函数对象，然后交由`Dispatcher`来执行。所有的函数对象执行都是顺序的。是在`Dispatcher`所在的线程中执行。整个post方法的代码非常短。
+</code></pre>
+<div class="highlight"><pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-cpp" data-lang="cpp"><span style="color:#8f5902;font-style:italic">// 所有的要执行的函数对象原型都一样，都是void()
+</span><span style="color:#8f5902;font-style:italic"></span><span style="color:#204a87;font-weight:bold">void</span> <span style="color:#000">DispatcherImpl</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">post</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">std</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">function</span><span style="color:#ce5c00;font-weight:bold">&lt;</span><span style="color:#204a87;font-weight:bold">void</span><span style="color:#000;font-weight:bold">()</span><span style="color:#ce5c00;font-weight:bold">&gt;</span> <span style="color:#000">callback</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#000;font-weight:bold">{</span>
+  <span style="color:#204a87;font-weight:bold">bool</span> <span style="color:#000">do_post</span><span style="color:#000;font-weight:bold">;</span>
+  <span style="color:#000;font-weight:bold">{</span>
+    <span style="color:#8f5902;font-style:italic">// 因为post方法可以跨线程执行，因此这里需要加锁来保证线程安全
+</span><span style="color:#8f5902;font-style:italic"></span>    <span style="color:#8f5902;font-style:italic">// 可以看出post方法本质上是将函数对象放到队列中，实际上并未执行
+</span><span style="color:#8f5902;font-style:italic"></span>    <span style="color:#000">Thread</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">LockGuard</span> <span style="color:#000">lock</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">post_lock_</span><span style="color:#000;font-weight:bold">);</span>
+    <span style="color:#000">do_post</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#000">post_callbacks_</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">empty</span><span style="color:#000;font-weight:bold">();</span>
+    <span style="color:#000">post_callbacks_</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">push_back</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">callback</span><span style="color:#000;font-weight:bold">);</span>
+  <span style="color:#000;font-weight:bold">}</span>
+
+  <span style="color:#204a87;font-weight:bold">if</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#000">do_post</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#000;font-weight:bold">{</span>
+    <span style="color:#000">post_timer_</span><span style="color:#ce5c00;font-weight:bold">-&gt;</span><span style="color:#000">enableTimer</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">std</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">chrono</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">milliseconds</span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">0</span><span style="color:#000;font-weight:bold">));</span>
+  <span style="color:#000;font-weight:bold">}</span>
+<span style="color:#000;font-weight:bold">}</span>
+</code></pre></div><p>​	<code>post</code>方法将传递进来的<code>callback</code>所代表的任务，添加到<code>post_callbacks_</code>所代表的类型为<code>vector&lt;callback&gt;</code>的成员变量中。如果<code>post_callbacks_</code>为空的话，说明背后的处理线程是处于非活动状态，这时通过<code>post_timer_</code>设置一个超时时间时间为0的方式来唤醒它。<code>post_timer_</code>在构造的时候就已经设置好对应的<code>callback</code>为<code>runPostCallbacks</code>，对应代码如下:</p>
+<div class="highlight"><pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-cpp" data-lang="cpp"><span style="color:#000">DispatcherImpl</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">DispatcherImpl</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">TimeSystem</span><span style="color:#ce5c00;font-weight:bold">&amp;</span> <span style="color:#000">time_system</span><span style="color:#000;font-weight:bold">,</span>
+							   <span style="color:#000">Buffer</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">WatermarkFactoryPtr</span><span style="color:#ce5c00;font-weight:bold">&amp;&amp;</span> <span style="color:#000">factory</span><span style="color:#000;font-weight:bold">)</span>
+    <span style="color:#ce5c00;font-weight:bold">:</span> <span style="color:#000;font-weight:bold">......</span>
+      <span style="color:#000">post_timer_</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">createTimer</span><span style="color:#000;font-weight:bold">([</span><span style="color:#204a87;font-weight:bold">this</span><span style="color:#000;font-weight:bold">]()</span> <span style="color:#ce5c00;font-weight:bold">-&gt;</span> <span style="color:#204a87;font-weight:bold">void</span> <span style="color:#000;font-weight:bold">{</span> <span style="color:#000">runPostCallbacks</span><span style="color:#000;font-weight:bold">();</span> <span style="color:#000;font-weight:bold">})),</span>
+      <span style="color:#000">current_to_delete_</span><span style="color:#000;font-weight:bold">(</span><span style="color:#ce5c00;font-weight:bold">&amp;</span><span style="color:#000">to_delete_1_</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#000;font-weight:bold">{</span>
+  <span style="color:#000">RELEASE_ASSERT</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">Libevent</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">Global</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">initialized</span><span style="color:#000;font-weight:bold">(),</span> <span style="color:#4e9a06">&#34;&#34;</span><span style="color:#000;font-weight:bold">);</span>
+<span style="color:#000;font-weight:bold">}</span>
+</code></pre></div><p>​	<code>runPostCallbacks</code>是一个while循环，每次都从<code>post_callbacks_</code>中取出一个<code>callback</code>所代表的任务去运行，直到<code>post_callbacks_</code>为空。每次运行<code>runPostCallbacks</code>都会确保所有的任务都执行完。显然，在<code>runPostCallbacks</code>被线程执行的期间如果<code>post</code>进来了新的任务，那么新任务直接追加到<code>post_callbacks_</code>尾部即可，而无需做唤醒线程这一动作。</p>
+<div class="highlight"><pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-cpp" data-lang="cpp"><span style="color:#204a87;font-weight:bold">void</span> <span style="color:#000">DispatcherImpl</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">runPostCallbacks</span><span style="color:#000;font-weight:bold">()</span> <span style="color:#000;font-weight:bold">{</span>
+  <span style="color:#204a87;font-weight:bold">while</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#204a87">true</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#000;font-weight:bold">{</span>
+    <span style="color:#000">std</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">function</span><span style="color:#ce5c00;font-weight:bold">&lt;</span><span style="color:#204a87;font-weight:bold">void</span><span style="color:#000;font-weight:bold">()</span><span style="color:#ce5c00;font-weight:bold">&gt;</span> <span style="color:#000">callback</span><span style="color:#000;font-weight:bold">;</span>
+    <span style="color:#000;font-weight:bold">{</span>
+      <span style="color:#000">Thread</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">LockGuard</span> <span style="color:#000">lock</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">post_lock_</span><span style="color:#000;font-weight:bold">);</span>
+      <span style="color:#204a87;font-weight:bold">if</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#000">post_callbacks_</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">empty</span><span style="color:#000;font-weight:bold">())</span> <span style="color:#000;font-weight:bold">{</span>
+        <span style="color:#204a87;font-weight:bold">return</span><span style="color:#000;font-weight:bold">;</span>
+      <span style="color:#000;font-weight:bold">}</span>
+      <span style="color:#000">callback</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#000">post_callbacks_</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">front</span><span style="color:#000;font-weight:bold">();</span>
+      <span style="color:#000">post_callbacks_</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">pop_front</span><span style="color:#000;font-weight:bold">();</span>
+    <span style="color:#000;font-weight:bold">}</span>
+    <span style="color:#000">callback</span><span style="color:#000;font-weight:bold">();</span>
+  <span style="color:#000;font-weight:bold">}</span>
+<span style="color:#000;font-weight:bold">}</span>
+</code></pre></div><p>​	到此为止Envoy中的任务执行队列就分析完了，可以看出这个部分的代码实现还是很简单的，也很容易验证其正确性，在Envoy的代码中被广泛使用。这个能力和Boost::asio中的post task是类似的。</p>
+<h1 id="deferreddeletable">DeferredDeletable</h1>
+<p>​	本小节是<code>Dispatcher</code>中最重要的一个部分<code>DeferredDeletable</code>，又被称为延迟析构，目的是用于安全的进行对象析构。C++语言本身会存在对象析构了，但还有引用它的指针存在，这个时候通过这个指针访问这个对象就会导致未定义行为了。因此写C++的同学就需要特别注意一个对象的生命周期问题，要保证引用一个对象的时候，对象还没有被析构。在C++中有不少方案可以来解决这个问题，典型的像使用shared_ptr的方式。而本文的要分析的<code>DeferredDeletable</code>则是使用另外一种方式来解决对象安全析构问题，这个方案的并不是一个通用的方案，仅能解决部分场景下的对象安全析构问题，但是对于Envoy使用到的场景已经足够了，接下来我们将分析它是如何做到对象安全析构的。</p>
+<p>​	<code>DeferredDeletable</code>本身是一个空接口，所有要进行延迟析构的对象都要继承自这个空接口。在Envoy的代码中像下面这样继承自<code>DeferredDeletable</code>的类随处可见。</p>
+<div class="highlight"><pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-cpp" data-lang="cpp"><span style="color:#204a87;font-weight:bold">class</span> <span style="color:#000">DeferredDeletable</span> <span style="color:#000;font-weight:bold">{</span>
+<span style="color:#204a87;font-weight:bold">public</span><span style="color:#ce5c00;font-weight:bold">:</span>
+  <span style="color:#204a87;font-weight:bold">virtual</span> <span style="color:#ce5c00;font-weight:bold">~</span><span style="color:#000">DeferredDeletable</span><span style="color:#000;font-weight:bold">()</span> <span style="color:#000;font-weight:bold">{}</span>
+<span style="color:#000;font-weight:bold">};</span>
+
+<span style="color:#204a87;font-weight:bold">class</span> <span style="color:#000">Connection</span> <span style="color:#ce5c00;font-weight:bold">:</span> <span style="color:#204a87;font-weight:bold">public</span> <span style="color:#000">Event</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">DeferredDeletable</span> <span style="color:#000;font-weight:bold">{</span> <span style="color:#000;font-weight:bold">....</span> <span style="color:#000;font-weight:bold">}</span>
+
+<span style="color:#8f5902;font-style:italic">/**
+</span><span style="color:#8f5902;font-style:italic"> * An instance of a generic connection pool.
+</span><span style="color:#8f5902;font-style:italic"> */</span>
+<span style="color:#204a87;font-weight:bold">class</span> <span style="color:#000">Instance</span> <span style="color:#ce5c00;font-weight:bold">:</span> <span style="color:#204a87;font-weight:bold">public</span> <span style="color:#000">Event</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">DeferredDeletable</span> <span style="color:#000;font-weight:bold">{</span> <span style="color:#000;font-weight:bold">.....</span> <span style="color:#000;font-weight:bold">}</span>
+
+<span style="color:#8f5902;font-style:italic">/**
+</span><span style="color:#8f5902;font-style:italic"> * Implementation of AsyncRequest. This implementation is capable of 
+</span><span style="color:#8f5902;font-style:italic"> * sending HTTP requests to a ConnectionPool asynchronously.
+</span><span style="color:#8f5902;font-style:italic"> */</span>
+<span style="color:#204a87;font-weight:bold">class</span> <span style="color:#000">AsyncStreamImpl</span> <span style="color:#ce5c00;font-weight:bold">:</span> <span style="color:#204a87;font-weight:bold">public</span> <span style="color:#000">Event</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">DeferredDeletable</span><span style="color:#000;font-weight:bold">{....}</span>
+</code></pre></div><p>​		这些继承<code>DeferredDeletable</code>接口的类都有一个特点，这些类基本上都是一些具有短暂生命周期的对象，比如连接对象、请求对象等。这也正是上文中提到的延迟析构并非是是一个通用方案，只是针对Envoy中的一些特定场景。<code>DeferredDeletable</code>和<code>Dispatcher</code>是密切相关，是基于<code>Dispatcher</code>来完成的。<code>Dispatcher</code>对象有一个<code>vector</code>保存了所有要延迟析构的对象。</p>
+<div class="highlight"><pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-cpp" data-lang="cpp"><span style="color:#204a87;font-weight:bold">class</span> <span style="color:#000">DispatcherImpl</span> <span style="color:#ce5c00;font-weight:bold">:</span> <span style="color:#204a87;font-weight:bold">public</span> <span style="color:#000">Dispatcher</span> <span style="color:#000;font-weight:bold">{</span>
+  <span style="color:#000;font-weight:bold">......</span>
+ <span style="color:#204a87;font-weight:bold">private</span><span style="color:#ce5c00;font-weight:bold">:</span>
+  <span style="color:#000;font-weight:bold">........</span>
+  <span style="color:#000">std</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">vector</span><span style="color:#ce5c00;font-weight:bold">&lt;</span><span style="color:#000">DeferredDeletablePtr</span><span style="color:#ce5c00;font-weight:bold">&gt;</span> <span style="color:#000">to_delete_1_</span><span style="color:#000;font-weight:bold">;</span>
+  <span style="color:#000">std</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">vector</span><span style="color:#ce5c00;font-weight:bold">&lt;</span><span style="color:#000">DeferredDeletablePtr</span><span style="color:#ce5c00;font-weight:bold">&gt;</span> <span style="color:#000">to_delete_2_</span><span style="color:#000;font-weight:bold">;</span>
+  <span style="color:#000">std</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">vector</span><span style="color:#ce5c00;font-weight:bold">&lt;</span><span style="color:#000">DeferredDeletablePtr</span><span style="color:#ce5c00;font-weight:bold">&gt;*</span> <span style="color:#000">current_to_delete_</span><span style="color:#000;font-weight:bold">;</span>
+ <span style="color:#000;font-weight:bold">}</span>
+</code></pre></div><p>​	<code>to_delete_1_</code>和<code>to_delete_2_</code>就是用来存放所有的要延迟析构的对象，这里使用两个<code>vector</code>存放，为什么要这样做呢？或许可能有人会想这是因为要保证线程安全，不能往一个正在析构的列表中添加对象。其实并非如此，多线程操作一个队列本就是非线程安全的，所以这里使用两个队列的目的并非是为了线程安全的。带着这个疑问继续往下分析，<code>current_to_delete_</code>始终指向当前正要析构的对象列表，每次执行完析构后就交替指向另外一个对象列表，来回交替。</p>
+<div class="highlight"><pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-cpp" data-lang="cpp"><span style="color:#204a87;font-weight:bold">void</span> <span style="color:#000">DispatcherImpl</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">clearDeferredDeleteList</span><span style="color:#000;font-weight:bold">()</span> <span style="color:#000;font-weight:bold">{</span>
+  <span style="color:#000">ASSERT</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">isThreadSafe</span><span style="color:#000;font-weight:bold">());</span>
+  <span style="color:#000">std</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">vector</span><span style="color:#ce5c00;font-weight:bold">&lt;</span><span style="color:#000">DeferredDeletablePtr</span><span style="color:#ce5c00;font-weight:bold">&gt;*</span> <span style="color:#000">to_delete</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#000">current_to_delete_</span><span style="color:#000;font-weight:bold">;</span>
+  <span style="color:#000">size_t</span> <span style="color:#000">num_to_delete</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#000">to_delete</span><span style="color:#ce5c00;font-weight:bold">-&gt;</span><span style="color:#000">size</span><span style="color:#000;font-weight:bold">();</span>
+  <span style="color:#8f5902;font-style:italic">// 如果正在删除或者没有对象可删除就返回
+</span><span style="color:#8f5902;font-style:italic"></span>  <span style="color:#204a87;font-weight:bold">if</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#000">deferred_deleting_</span> <span style="color:#ce5c00;font-weight:bold">||</span> <span style="color:#ce5c00;font-weight:bold">!</span><span style="color:#000">num_to_delete</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#000;font-weight:bold">{</span>
+    <span style="color:#204a87;font-weight:bold">return</span><span style="color:#000;font-weight:bold">;</span>
+  <span style="color:#000;font-weight:bold">}</span>
+  <span style="color:#8f5902;font-style:italic">// 正式开始删除对象
+</span><span style="color:#8f5902;font-style:italic"></span>  <span style="color:#000">ENVOY_LOG</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">trace</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#4e9a06">&#34;clearing deferred deletion list (size={})&#34;</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">num_to_delete</span><span style="color:#000;font-weight:bold">);</span>
+  <span style="color:#8f5902;font-style:italic">// current_to_delete_指向另外一个没有进行删除的队列
+</span><span style="color:#8f5902;font-style:italic"></span>  <span style="color:#204a87;font-weight:bold">if</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#000">current_to_delete_</span> <span style="color:#ce5c00;font-weight:bold">==</span> <span style="color:#ce5c00;font-weight:bold">&amp;</span><span style="color:#000">to_delete_1_</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#000;font-weight:bold">{</span>
+    <span style="color:#000">current_to_delete_</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#ce5c00;font-weight:bold">&amp;</span><span style="color:#000">to_delete_2_</span><span style="color:#000;font-weight:bold">;</span>
+  <span style="color:#000;font-weight:bold">}</span> <span style="color:#204a87;font-weight:bold">else</span> <span style="color:#000;font-weight:bold">{</span>
+    <span style="color:#000">current_to_delete_</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#ce5c00;font-weight:bold">&amp;</span><span style="color:#000">to_delete_1_</span><span style="color:#000;font-weight:bold">;</span>
+  <span style="color:#000;font-weight:bold">}</span>
+  <span style="color:#8f5902;font-style:italic">// 设置正在删除的标志
+</span><span style="color:#8f5902;font-style:italic"></span>  <span style="color:#000">deferred_deleting_</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#204a87">true</span><span style="color:#000;font-weight:bold">;</span>
+  <span style="color:#8f5902;font-style:italic">// 开始进行对象析构
+</span><span style="color:#8f5902;font-style:italic"></span>  <span style="color:#204a87;font-weight:bold">for</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#000">size_t</span> <span style="color:#000">i</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#0000cf;font-weight:bold">0</span><span style="color:#000;font-weight:bold">;</span> <span style="color:#000">i</span> <span style="color:#ce5c00;font-weight:bold">&lt;</span> <span style="color:#000">num_to_delete</span><span style="color:#000;font-weight:bold">;</span> <span style="color:#000">i</span><span style="color:#ce5c00;font-weight:bold">++</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#000;font-weight:bold">{</span>
+    <span style="color:#000;font-weight:bold">(</span><span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#000">to_delete</span><span style="color:#000;font-weight:bold">)[</span><span style="color:#000">i</span><span style="color:#000;font-weight:bold">].</span><span style="color:#000">reset</span><span style="color:#000;font-weight:bold">();</span>
+  <span style="color:#000;font-weight:bold">}</span>
+	
+  <span style="color:#000">to_delete</span><span style="color:#ce5c00;font-weight:bold">-&gt;</span><span style="color:#000">clear</span><span style="color:#000;font-weight:bold">();</span>
+  <span style="color:#8f5902;font-style:italic">// 结束
+</span><span style="color:#8f5902;font-style:italic"></span>  <span style="color:#000">deferred_deleting_</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#204a87">false</span><span style="color:#000;font-weight:bold">;</span>
+<span style="color:#000;font-weight:bold">}</span>
+</code></pre></div><p>​	上面的代码中我们可以看到在执行对象析构的时候先使用<code>to_delete</code>来指向当前正要析构的对象列表，然后将<code>current_to_delete_</code>指向另外一个列表，这里为什么要设置<code>deferred_deleting_</code>标志呢? 这是因为<code>clearDeferredDeleteList</code>可能会被调用多次，如果已经有对象正在析构，那么就不能再进行析构操作了，因此这里通过<code>deferred_deleting_</code>标志来保证同一时刻只能有一个对象析构的任务在执行。</p>
+<blockquote>
+<p>假设没有<code>deferred_deleting_</code>标志，如果此时正在执行<code>to_delete_1_</code>队列的对象析构，在析构的过程中调用了<code>clearDeferredDeleteList</code>，那么这个时候会对<code>to_delete_2_</code>队列开始析构，并且将<code>current_to_delete_</code>指向<code>to_delete_1_</code>，后续的待析构对象就都会添加到<code>to_delete_1_</code>队列中，这可能会导致对<code>to_delete_1_</code>析构的任务执行较长时间。影响其它关键任务的执行。</p>
+</blockquote>
+<p>​	接下来我们来看下如何将对象添加到待析构的列表中。</p>
+<div class="highlight"><pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-cpp" data-lang="cpp"><span style="color:#204a87;font-weight:bold">void</span> <span style="color:#000">DispatcherImpl</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">deferredDelete</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">DeferredDeletablePtr</span><span style="color:#ce5c00;font-weight:bold">&amp;&amp;</span> <span style="color:#000">to_delete</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#000;font-weight:bold">{</span>
+  <span style="color:#000">ASSERT</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">isThreadSafe</span><span style="color:#000;font-weight:bold">());</span>
+  <span style="color:#000">current_to_delete_</span><span style="color:#ce5c00;font-weight:bold">-&gt;</span><span style="color:#000">emplace_back</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">std</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">move</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">to_delete</span><span style="color:#000;font-weight:bold">));</span>
+  <span style="color:#000">ENVOY_LOG</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">trace</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#4e9a06">&#34;item added to deferred deletion list (size={})&#34;</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">current_to_delete_</span><span style="color:#ce5c00;font-weight:bold">-&gt;</span><span style="color:#000">size</span><span style="color:#000;font-weight:bold">());</span>
+  <span style="color:#204a87;font-weight:bold">if</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">1</span> <span style="color:#ce5c00;font-weight:bold">==</span> <span style="color:#000">current_to_delete_</span><span style="color:#ce5c00;font-weight:bold">-&gt;</span><span style="color:#000">size</span><span style="color:#000;font-weight:bold">())</span> <span style="color:#000;font-weight:bold">{</span>
+    <span style="color:#000">deferred_delete_timer_</span><span style="color:#ce5c00;font-weight:bold">-&gt;</span><span style="color:#000">enableTimer</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">std</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">chrono</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">milliseconds</span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">0</span><span style="color:#000;font-weight:bold">));</span>
+  <span style="color:#000;font-weight:bold">}</span>
+<span style="color:#000;font-weight:bold">}</span>
+</code></pre></div><p>​	<code>deferredDelete</code>和<code>clearDeferredDeleteList</code>这两个方法都调用了<code> ASSERT(isThreadSafe());</code>目的是断言调用这两个方法是在Dispatcher所在线程执行的，是单线程运行。可以保证线程安全。 既然如此我们便可以安全的往待析构的对象列表中追加对象了，这也验证了两个队列的设计并非是为了线程安全。那为何还要搞出<code>to_delete_1_</code>和<code>to_delete_2_</code>两个列表呢?  完全可以通过一个列表来实现，通过while循环不断的进行对象析构，直到列表为空。在处理的过程中还可以往列表中追加对象。</p>
+<div class="highlight"><pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-cpp" data-lang="cpp"><span style="color:#204a87;font-weight:bold">while</span><span style="color:#000;font-weight:bold">(</span><span style="color:#ce5c00;font-weight:bold">!</span><span style="color:#000">current_to_delete_</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">empty</span><span style="color:#000;font-weight:bold">())</span> <span style="color:#000;font-weight:bold">{</span>
+	<span style="color:#204a87;font-weight:bold">auto</span> <span style="color:#000">obj</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#000">current_to_delete_</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">pop_back</span><span style="color:#000;font-weight:bold">();</span>
+	<span style="color:#8f5902;font-style:italic">//  进行业务逻辑的处理
+</span><span style="color:#8f5902;font-style:italic"></span><span style="color:#000;font-weight:bold">}</span>
+</code></pre></div><p>​	从功能正确性的角度来看，这里使用两个列表，还是一个列表都可以正确实现，在上文中分析的任务执行队列其实就是使用一个列表来完成的。但是Envoy在这里选择了两个队列的方式，这是因为相比于任务执行队列来说延迟析构的重要性更低一些，大量对象的析构如果保存在一个队列中循环的进行析构势必会影响其他关键任务的执行，所以这里拆分成两个队列，多个任务交替的执行，避免被一个大的耗时任务长期占用，导致其他关键任务无法及时执行。</p>
+<blockquote>
+<p>如果用一个队列做对象析构，在对象的析构函数中可能还会再次调用deferredDelete将新的对象追加到待析构的列表中，所以可能会导致队列中的任务不断增加，造成整个对象析构耗时较长。</p>
+</blockquote>
+<p>​	继续看<code>deferredDelete</code>的代码我们会发现另外一个问题，为何要在当前待析构对象的列表大小等于1的时候唤起定时器任务呢?</p>
+<div class="highlight"><pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-cpp" data-lang="cpp"><span style="color:#204a87;font-weight:bold">if</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">1</span> <span style="color:#ce5c00;font-weight:bold">==</span> <span style="color:#000">current_to_delete_</span><span style="color:#ce5c00;font-weight:bold">-&gt;</span><span style="color:#000">size</span><span style="color:#000;font-weight:bold">())</span> <span style="color:#000;font-weight:bold">{</span>
+  <span style="color:#8f5902;font-style:italic">// deferred_delete_timer_(createTimerInternal([this]() -&gt; void { 			  
+</span><span style="color:#8f5902;font-style:italic"></span>  <span style="color:#8f5902;font-style:italic">// clearDeferredDeleteList(); })),
+</span><span style="color:#8f5902;font-style:italic"></span>  <span style="color:#8f5902;font-style:italic">// deferred_delete_timer_定时器对应的任务就是clearDeferredDeleteList
+</span><span style="color:#8f5902;font-style:italic"></span>  <span style="color:#000">deferred_delete_timer_</span><span style="color:#ce5c00;font-weight:bold">-&gt;</span><span style="color:#000">enableTimer</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">std</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">chrono</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">milliseconds</span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">0</span><span style="color:#000;font-weight:bold">));</span>
+<span style="color:#000;font-weight:bold">}</span>
+</code></pre></div><p>​	假设我们每次添加对象到当前列表中都进行唤醒，那么带来的问题就是<code>clearDeferredDeleteList</code>的任务会有多个，但是实际上只有两个队列，只需要有两个<code>clearDeferredDeleteList</code>任务就可以将两个队列中的对象都析构掉，那么剩下的任务将不会进行任何实际的工作。很显然这样会带来CPU上的浪费，因此我们应该尽可能的少唤醒，保证任何时候最多只有两个任务。因此我们只要能保证在每次队列为空的时候唤醒一次即可，因为唤醒的这次任务会负责将这个队列变为空，到时候在此唤醒一个任务即可。这也就是为什么这里通过判断当前待析构对象的列表大小等于1的原因了。</p>
+<p>​	到此为止<code>deferredDelete</code>的实现原理就基本分析完了，可以看出它的实现和任务队列的实现很类似，只不过一个是循环执行<code>callback</code>所代表的任务，另一个是让对象进行析构。最后让我们通过下图来看下整个<code>deferredDelete</code>的流程。</p>
+<p><img src="https://ata2-img.oss-cn-zhangjiakou.aliyuncs.com/ebb781960da723965cdd9d968dc10258.png" alt="4-1.png"></p>
+<ul>
+<li>对象要被析构了，开始调用<code>deferredDelete</code>将对象添加到<code>to_delete_1</code>队列中，然后唤醒<code>clearDeferredDeleteList</code>任务。</li>
+<li><code>clearDeferredDeleteList</code>任务开始执行，<code>current_to_delete</code>指向<code>to_delete_2</code>队列</li>
+<li>对象在析构的过程中又通过<code>deferredDelete</code>添加了新的对象到to_delete_2队列中，这个队列初始是空的，因此再次唤醒一个<code>clearDeferredDeleteList</code>任务。</li>
+<li><code>to_delete_1</code>队列继续进行对象的析构，在析构期间有大量对象被添加到<code>to_delete_2</code>队列中，但是没有唤醒<code>clearDeferredDeleteList</code>任务。</li>
+<li>to_delete_1对象析构完毕</li>
+<li>再次执行<code>clearDeferredDeleteList</code>对<code>to_delete_2</code>中对象进行析构。</li>
+<li>如此反复便可以高效的在两个队列之间来回切换进行对象的析构。</li>
+</ul>
+<p>​	虽然分析完了整个<code>deferredDelete</code>的过程，但是我们还没有回答本节一开始提到的如何安全的进行对象析构的问题。让我们先来看一下<code>deferredDelete</code>的应用场景，看看“为何要进行延迟析构?” 以及<code>deferredDelete</code>是如何解决对象安全析构的问题。在Envoy的源代码中经常会看到像下面这样的代码片段。</p>
+<div class="highlight"><pre style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-cpp" data-lang="cpp"><span style="color:#000">ConnectionImpl</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">ConnectionImpl</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">Event</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">Dispatcher</span><span style="color:#ce5c00;font-weight:bold">&amp;</span> <span style="color:#000">dispatcher</span><span style="color:#000;font-weight:bold">,</span> 
+							   <span style="color:#000">ConnectionSocketPtr</span><span style="color:#ce5c00;font-weight:bold">&amp;&amp;</span> <span style="color:#000">socket</span><span style="color:#000;font-weight:bold">,</span>
+                               <span style="color:#000">TransportSocketPtr</span><span style="color:#ce5c00;font-weight:bold">&amp;&amp;</span> <span style="color:#000">transport_socket</span><span style="color:#000;font-weight:bold">,</span>
+							   <span style="color:#204a87;font-weight:bold">bool</span> <span style="color:#000">connected</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#000;font-weight:bold">{</span>
+<span style="color:#000;font-weight:bold">......</span>
+  <span style="color:#000;font-weight:bold">}</span>
+  <span style="color:#8f5902;font-style:italic">// 传递裸指针到回调中
+</span><span style="color:#8f5902;font-style:italic"></span>  <span style="color:#000">file_event_</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#000">dispatcher_</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">createFileEvent</span><span style="color:#000;font-weight:bold">(</span>
+    	<span style="color:#8f5902;font-style:italic">// 这里将this裸指针传递给了内部的callback
+</span><span style="color:#8f5902;font-style:italic"></span>      <span style="color:#8f5902;font-style:italic">// callback内部通过this指针访问onFileEvent方法，如何保证
+</span><span style="color:#8f5902;font-style:italic"></span>      <span style="color:#8f5902;font-style:italic">// callback执行的时候，this指针是有效的呢?
+</span><span style="color:#8f5902;font-style:italic"></span>      <span style="color:#000">fd</span><span style="color:#000;font-weight:bold">(),</span> <span style="color:#000;font-weight:bold">[</span><span style="color:#204a87;font-weight:bold">this</span><span style="color:#000;font-weight:bold">](</span><span style="color:#204a87;font-weight:bold">uint32_t</span> <span style="color:#000">events</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#ce5c00;font-weight:bold">-&gt;</span> <span style="color:#204a87;font-weight:bold">void</span> <span style="color:#000;font-weight:bold">{</span> <span style="color:#000">onFileEvent</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">events</span><span style="color:#000;font-weight:bold">);</span> <span style="color:#000;font-weight:bold">},</span> 
+      <span style="color:#000">Event</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">FileTriggerType</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">Edge</span><span style="color:#000;font-weight:bold">,</span>
+      <span style="color:#000">Event</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">FileReadyType</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">Read</span> <span style="color:#ce5c00;font-weight:bold">|</span> <span style="color:#000">Event</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">FileReadyType</span><span style="color:#ce5c00;font-weight:bold">::</span><span style="color:#000">Write</span><span style="color:#000;font-weight:bold">);</span>
+	<span style="color:#000;font-weight:bold">......</span>
+<span style="color:#000;font-weight:bold">}</span>
+</code></pre></div><p>​	传递给<code>Dispatcher</code>的<code>callback</code>都是通过裸指针的方式进行回调，如果进行回调的时候对象已经析构了，就会出现野指针的问题，我相信学过C++的同学都会看出这个问题，除非能在逻辑上保证<code>Dispatcher</code>的生命周期比所有对象都短，这样就能保证在回调的时候对象肯定不会析构，但是这不可能成立的，因为<code>Dispatcher</code>是<code>EventLoop</code>的核心。一个线程运行一个<code>EventLoop</code>直到线程结束，<code>Dispatcher</code>对象才会析构，这意味着<code>Dispatcher</code>对象的生命周期是最长的。所以从逻辑上没办法保证进行回调的时候对象没有析构。可能有人会有疑问，对象在析构的时候把注册的事件(<code>file_event_</code>)取消不就可以避免野指针的问题吗? 那如果事件已经触发了，<code>callback</code>正在等待运行？ 又或者<code>callback</code>运行了一半呢？前者libevent是可以保证的，在调用<code>event_del</code>删除事件的时候可以把处于等待运行的事件callback取消掉，但是后者就无能为力了，这个时候如果对象析构了，那行为就是未定义了。沿着这个思路想一想，是不是只要保证对象析构的时候没有<code>callback</code>正在运行就可以解决问题了呢？是的，只要保证所有在执行中的<code>callback</code>执行完了，再做对象析构就可以了。可以利用<code>Dispatcher</code>是顺序执行所有<code>callback</code>的特点，向<code>Dispatcher</code>中插入一个任务就是用来对象析构的，那么当这个任务执行的时候是可以保证没有其他任何<code>callback</code>在运行。通过这个方法就完美解决了这里遇到的野指针问题了。或许有人又会想，这里是不是可以用<a href="https://en.cppreference.com/w/cpp/memory/shared_ptr">shared_ptr</a>和<a href="https://en.cppreference.com/w/cpp/memory/enable_shared_from_this/shared_from_this">shared_from_this</a>来解这个呢? 是的，这是解决多线程环境下对象析构的秘密武器，通过延长对象的生命周期，把对象的生命周期延长到和<code>callback</code>一样，等<code>callback</code>执行完再进行析构，同样可以达到效果，但是这带来了两个问题，第一就是对象生命周期被无限拉长，虽然延迟析构也拉长了生命周期，但是时间是可预期的，一旦<code>EventLoop</code>执行了<code>clearDeferredDeleteList</code>任务就会立刻被回收，而通过<code>shared_ptr</code>的方式其生命周期取决于<code>callback</code>何时运行，而<code>callback</code>何时运行这个是没办法保证的，比如一个等待<code>socket</code>的可读事件进行回调，如果对端一直不发送数据，那么<code>callback</code>就一直不会被运行，对象就一直无法被析构，长时间累积会导致内存使用率上涨。第二就是在使用方式上侵入性较强，需要强制使用<code>shared_ptr</code>的方式创建对象。</p>
+
+	
+
+	
+		<br />
+		<div id="utter-container"></div>
+<script src="https://utteranc.es/client.js"
+    repo= 'envoyproxy-cn/comments'
+    issue-term= "pathname"
+    theme= 'github-light'
+    crossorigin= "anonymous"
+    async>
+</script> 
+	
+
+	<ul class="list-unstyled d-flex justify-content-between align-items-center mb-0 pt-5">
+  <li>
+    <a href="/sig-envoy/blog/2020/08/23/envoy%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90%E4%B9%8Bthreadlocal%E6%9C%BA%E5%88%B6/" class="btn btn-primary "><span class="mr-1">←</span> 上一页</a>
+  </li>
+    <a  class="btn btn-primary  disabled">下一页 <span class="ml-1">→</span></a>
+  </li>
+</ul>
+
+</div>
+
+
+          </main>
+        </div>
+      </div>
+      
+<footer class="bg-dark py-5 row d-print-none">
+  <div class="container-fluid mx-sm-5">
+    <div class="row">
+      <div class="col-6 col-sm-4 text-xs-center order-sm-2">
+        
+        
+        
+<ul class="list-inline mb-0">
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="GitHub" aria-label="GitHub">
+    <a class="text-white" target="_blank" href="https://github.com/cloudnativeto/sig-envoy">
+      <i class="fab fa-github"></i>
+    </a>
+  </li>
+  
+</ul>
+
+        
+        
+      </div>
+      <div class="col-6 col-sm-4 text-right text-xs-center order-sm-3">
+        
+        
+        
+      </div>
+      <div class="col-12 col-sm-4 text-center py-2 order-sm-2">
+        <small class="text-white">&copy; 2020 云原生社区 All Rights Reserved
+        
+	
+      </div>
+    </div>
+  </div>
+</footer>
+
+
+    </div>
+    
+<script src="/js/popper.min.js"></script>
+<script src="/js/bootstrap.min.js"></script>
+
+
+
+
+
+
+
+
+
+<script src="/sig-envoy/js/main.min.664f21bf5eb0c31ebc661e2616e6c63e0448cec6d5636d869957be423c3cb952.js" integrity="sha256-Zk8hv16wwx68Zh4mFubGPgRIzsbVY22GmVe&#43;Qjw8uVI=" crossorigin="anonymous"></script>
+
+
+
+
+
+  </body>
+</html>
