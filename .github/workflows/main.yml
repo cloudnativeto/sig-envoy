@@ -14,6 +14,7 @@ jobs:
           extended: true
       - run: npm install postcss-cli
       - run: yarn add --dev postcss-loader postcss-import postcss-cssnext cssnano sugarss autoprefixer
+      - run: npm install
       - name: Build
         # remove --minify tag if you do not need it
         # docs: https://gohugo.io/hugo-pipes/minification/
