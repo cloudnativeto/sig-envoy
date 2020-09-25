@@ -30,7 +30,6 @@ WORKSPACE文件，用于指定当前文件夹就是一个Bazel的工作区。工
 
 接下来我们将开始分析Bazel在envoy-filter-example项目中的配置与作用，为了能够更好地阅读本文，希望大家已经有了Bazel的一些基础入门知识或者概念。关于Bazel的基础入门，可以参考一下两篇文章，看完了基本上就对Bazel有个总体了解了：
 - Bazel官方示例解读（CSDN): https://blog.csdn.net/elaine_bao/article/details/78668657
-- Bazel基础教程（KM): http://km.oa.com/group/18832/articles/show/400483
 
  ## 二、Filter示例的目录结构
 
