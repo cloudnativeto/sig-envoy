@@ -34,7 +34,6 @@
 &lt;p&gt;接下来我们将开始分析Bazel在envoy-filter-example项目中的配置与作用，为了能够更好地阅读本文，希望大家已经有了Bazel的一些基础入门知识或者概念。关于Bazel的基础入门，可以参考一下两篇文章，看完了基本上就对Bazel有个总体了解了：&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;Bazel官方示例解读（CSDN): &lt;a href=&#34;https://blog.csdn.net/elaine_bao/article/details/78668657&#34;&gt;https://blog.csdn.net/elaine_bao/article/details/78668657&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;Bazel基础教程（KM): &lt;a href=&#34;http://km.oa.com/group/18832/articles/show/400483&#34;&gt;http://km.oa.com/group/18832/articles/show/400483&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
 &lt;h2 id=&#34;二filter示例的目录结构&#34;&gt;二、Filter示例的目录结构&lt;/h2&gt;
 &lt;p&gt;首先，我们从github上clone下来filter的示例代码，并拉取子模块：&lt;/p&gt;
