@@ -74,7 +74,7 @@ time_format_blog = "2006年1月2日"
 # Everything below this are Site Params
 
 [params]
-copyright = "云原生社区"
+copyright = "云原生社区-Envoy-SIG"
 # privacy_policy = "https://policies.google.com/privacy"
 
 # First one is picked as the Twitter card image if not set on page.

@@ -3,7 +3,7 @@ title: 社区
 linkTitle: 社区
 menu:
   main:
-    weight: 40
+    weight: 20
 description: 关于云原生社区 Envoy SIG。
 ---
 
