@@ -24,10 +24,10 @@
 <meta property="og:description" content="" />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://cloudnative.to/sig-envoy/index.json" />
-<meta property="article:modified_time" content="2020-09-25T16:47:00+08:00" /><meta property="og:site_name" content="Envoy SIG" />
+<meta property="article:modified_time" content="2020-09-26T23:10:23+08:00" /><meta property="og:site_name" content="Envoy SIG" />
 <meta itemprop="name" content="">
 <meta itemprop="description" content="">
-<meta itemprop="dateModified" content="2020-09-25T16:47:00+08:00" />
+<meta itemprop="dateModified" content="2020-09-26T23:10:23+08:00" />
 <meta itemprop="wordCount" content="0">
 
 
@@ -41,8 +41,8 @@
 
 
 
-<link rel="preload" href="/sig-envoy/scss/main.min.106faf8918430dc54ff23452809376917bb1354878bb798c94f95c0f873cf514.css" as="style">
-<link href="/sig-envoy/scss/main.min.106faf8918430dc54ff23452809376917bb1354878bb798c94f95c0f873cf514.css" rel="stylesheet" integrity="">
+<link rel="preload" href="/sig-envoy/scss/main.min.1b0fe2bdad95a48b1637110ca7984f00e1e84f9e71e1009c4a18132806282673.css" as="style">
+<link href="/sig-envoy/scss/main.min.1b0fe2bdad95a48b1637110ca7984f00e1e84f9e71e1009c4a18132806282673.css" rel="stylesheet" integrity="">
 
 
   <script src="/js/jquery-3.5.1.min.js"></script>
@@ -67,13 +67,6 @@
              
             <li class="nav-item mr-4 mb-2 mb-lg-0">
                      
-                <a class="nav-link" href="/sig-envoy/docs/" >
-                    <span>文档</span>
-                </a>
-            </li>
-            
-            <li class="nav-item mr-4 mb-2 mb-lg-0">
-                     
                 <a class="nav-link" href="/sig-envoy/blog/" >
                     <span>博客</span>
                 </a>
@@ -83,6 +76,13 @@
                      
                 <a class="nav-link" href="/sig-envoy/docs/community/" >
                     <span>社区</span>
+                </a>
+            </li>
+            
+            <li class="nav-item mr-4 mb-2 mb-lg-0">
+                     
+                <a class="nav-link" href="/sig-envoy/docs/" >
+                    <span>文档</span>
                 </a>
             </li>
               
@@ -127,7 +127,7 @@
         
       </div>
       <div class="col-12 col-sm-4 text-center py-2 order-sm-2">
-        <small class="text-white">&copy; 2020 云原生社区 All Rights Reserved
+        <small class="text-white">&copy; 2020 云原生社区-Envoy-SIG All Rights Reserved
         
 	
       </div>
