@@ -1,28 +1,5 @@
 # 云原生社区 Envoy SIG
 
-详情见：<https://cloudnative.to/blog/sig-envoy-announcement/>
+欢迎来到云原生社区 Envoy SIG（特别兴趣小组）！
 
-
-# 本地运行社区网站
-
-1. 安装hugo
-
-```bash
-brew install hugo
-```
-
-2. 克隆社区网站源码
-
-```bash
-git clone https://github.com/cloudnativeto/sig-envoy
-cd sig-envoy
-```
-
-3. 修改后本地运行
-
-```bash
-hugo server
-```
-
-## 贡献指南
-
+进入 Envoy SIG 页面：<https://i.cloudnative.to/envoy/>
