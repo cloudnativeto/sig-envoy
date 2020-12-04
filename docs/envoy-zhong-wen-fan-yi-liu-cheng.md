@@ -18,7 +18,7 @@
 
 1 在 [cloudnativeto/envoy](https://github.com/cloudnativeto/envoy) 库的  [issue](https://github.com/cloudnativeto/envoy/issues) 中认领自己想翻译的 issue，然后在comment中输入 `/accept`。
 
-2 翻译完毕，提PR至 cloudnativeto/envoy 仓库，同时输入 `/pushed` 指令修改 issue 的状态
+2 翻译完毕，提PR至 [cloudnativeto/envoy](https://github.com/cloudnativeto/envoy/) 仓库，同时输入 `/pushed` 指令修改 issue 的状态
 
 3 待 PR 被 merge 之后，请输入 `/merged` 指令关闭对应的翻译issue
 
