@@ -2,7 +2,7 @@
 
 ### 前提条件：
 
-1 熟悉 GitHub 操作流程
+1 熟悉 GitHub 操作流程（Fork [翻译主库](https://github.com/cloudnativeto/envoy) 至个人 GItHub 账号下，clone 仓库至本地，翻译相关文件，然后 push 翻译代码至自己仓库，最后从个人仓库向 GitHub 提 PR）。详情可查看[翻译流程图示](https://github.com/cloudnativeto/envoy/blob/zh/docs/root/img/envoy-trans.png)。
 
 2 对 Envoy 所有了解
 
