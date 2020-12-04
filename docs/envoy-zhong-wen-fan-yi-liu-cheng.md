@@ -22,6 +22,12 @@
 
 3 待 PR 被 merge 之后，请输入 `/merged` 指令关闭对应的翻译issue
 
+4 认领下一个人任务，开始翻译
+
+### 加入 Review 团队（Optional）
+
+为了把控 Envoy 的翻译质量，我们成立了专门的 Envoy Review 团队，每一个 PR 都需要至少两位 Reviewer 通过才可以关闭，如果你想加入 Review 团队，一起把关 Envoy 翻译的质量，欢迎加入我们，可在 Envoy SIG 微信群里面，发微信给 Jimmy 或者 我（小马哥）。经过面试后，我们会拉你入群。
+
 
 
 
