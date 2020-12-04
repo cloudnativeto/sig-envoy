@@ -14,3 +14,8 @@ description: 云原生社区 Envoy SIG
 
 有关于 Envoy 的问题请[提交 Issue](https://github.com/cloudnativeto/sig-envoy/issues/new) 后将链接发到微信群中讨论。
 
+## 联系
+
+**负责人**
+
+- [马景贺（小马哥）](https://github.com/majinghe)
