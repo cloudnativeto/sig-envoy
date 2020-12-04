@@ -14,13 +14,13 @@
 
 开始翻译
 
-翻译前请认真阅读\[翻译指南\]\([ https://github.com/cloudnativeto/envoy/tree/zh/docs/root](%20https://github.com/cloudnativeto/envoy/tree/zh/docs/root)\)
+翻译前请认真阅读翻译指南：[ https://github.com/cloudnativeto/envoy/tree/zh/docs/root](%20https://github.com/cloudnativeto/envoy/tree/zh/docs/root)
 
 1 在cloudnativeto/envoy 库的 issue 中认领自己想翻译的 issue，然后在comment中输入 /accept。
 
-2 翻译完毕，提PR至 cloudnativeto/envoy 仓库。
+2 翻译完毕，提PR至 cloudnativeto/envoy 仓库，同时输入 /pushed 指令修改 issue 的状态
 
-3 待 PR 被 merge 之后，请关闭对应的翻译issue
+3 待 PR 被 merge 之后，请输入 /merged 指令关闭对应的翻译issue
 
 
 
