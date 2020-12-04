@@ -18,4 +18,5 @@ description: 云原生社区 Envoy SIG
 
 **负责人**
 
-- [马景贺（小马哥）](https://github.com/majinghe)
+* [马景贺（小马哥）](https://github.com/majinghe)
+
