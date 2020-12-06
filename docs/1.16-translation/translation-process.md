@@ -24,6 +24,10 @@
 
 4 认领下一个人任务，开始翻译
 
+整体的翻译流程可以参考下图：
+
+![&#x7FFB;&#x8BD1;&#x6D41;&#x7A0B;&#x793A;&#x610F;&#x56FE;](../.gitbook/assets/envoy-trans.png)
+
 ### 加入 Review 团队（Optional）
 
 为了把控 Envoy 的翻译质量，我们成立了专门的 Envoy Review 团队，每一个 PR 都需要至少两位 Reviewer 通过才可以关闭，如果你想加入 Review 团队，一起把关 Envoy 翻译的质量，欢迎加入我们，可在 Envoy SIG 微信群里面，发微信给 Jimmy 或者 我（小马哥）。经过面试后，我们会拉你入群。
