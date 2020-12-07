@@ -7,4 +7,5 @@
 * [Envoy 中文翻译流程](1.16-translation/translation-process.md)
 * [Envoy 中文翻译成员及优秀人员](1.16-translation/excellent-translator.md)
 * [Envoy 翻译进度](1.16-translation/translation-progress.md)
+* [Envoy 常见编译问题](1.16-translation/format-troubleshooting.md)
 
