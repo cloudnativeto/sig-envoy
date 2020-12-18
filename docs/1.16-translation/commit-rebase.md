@@ -96,7 +96,7 @@ add cloud security policy translation
 
 # This is the commit message #2:
 
-#fix translation issue
+# fix translation issue
 
 # This is the commit message #3:
 
