@@ -1,0 +1,67 @@
+# Envoy 官方文档翻译工作总结
+
+Envoy 1.6 官方文档翻译是从 [2020 年 11 月 4 日启动](https://mp.weixin.qq.com/s/NsuQtn391DVFnUOVp_r4OQ) 启动，到 4 月底结束了最后一篇的翻译。前后历经半年，完成了 **327** 篇文档的翻译。共有有 **47** 位同学认领了文档的翻译工作，同时有 **46** 位同学参与了翻译的校对。
+
+[中文文档](https://cloudnative.to/envoy/)访问地址：https://cloudnative.to/envoy/
+
+### 这并不是结束
+
+虽然文档翻译的工作已经结束，但翻译的打磨还会继续。在文档的使用过程中，如果任何问题，欢迎到 [Envoy 翻译仓库](https://github.com/cloudnativeto/envoy) 中提出，也欢迎提交 PR 修正。
+
+最后，再次感谢各位参与者的辛苦付出。
+
+| 参与者            | 翻译文档数 | 审核人员           | 审核的 PR 数 |
+|----------------|-------|----------------|----------|
+| majinghe       | 99    | majinghe       | 124      |
+| addozhang      | 41    | addozhang      | 111      |
+| vgbhfive       | 32    | helight        | 85       |
+| scilla0531     | 25    | scilla0531     | 77       |
+| webup          | 14    | hzliangbin     | 37       |
+| WisWang        | 9     | vgbhfive       | 25       |
+| alandtsang     | 8     | WisWang        | 17       |
+| wujie1993      | 7     | webup          | 10       |
+| li-guest       | 6     | fallingyang    | 9        |
+| kkfinkkfin     | 6     | zhiguo-lu      | 8        |
+| yoyochan7253   | 5     | shenhonglei    | 7        |
+| shenhonglei    | 5     | Miss-you       | 6        |
+| hbrls          | 5     | mars-zhangcong | 6        |
+| baobaoyeye     | 5     | baobaoyeye     | 6        |
+| helight        | 4     | shalk          | 5        |
+| Alibner        | 4     | smarkm         | 5        |
+| smarkm         | 3     | lut777         | 5        |
+| mars-zhangcong | 3     | li-guest       | 5        |
+| lianghao208    | 3     | yoyochan7253   | 4        |
+| herbguo        | 3     | wujie1993      | 4        |
+| fallingyang    | 3     | alandtsang     | 4        |
+| Xunzhuo        | 3     | kkfinkkfin     | 3        |
+| zxb789         | 2     | herbguo        | 3        |
+| zhd173         | 2     | Alibner        | 3        |
+| shalk          | 2     | inetkiller     | 3        |
+| redzippo1      | 2     | Ayden-Franklin | 2        |
+| luohua13       | 2     | luohua13       | 2        |
+| llhhbc         | 2     | rootsongjc     | 2        |
+| hustshawn      | 2     | redzippo1      | 2        |
+| cr7258         | 2     | llhhbc         | 2        |
+| bjtuchenmin    | 2     | Xunzhuo        | 2        |
+| zucong         | 1     | zhd173         | 2        |
+| yanxinfire     | 1     | keqingyuan     | 1        |
+| shniu          | 1     | ewth126        | 1        |
+| pengpengfly    | 1     | hustshawn      | 1        |
+| pefish         | 1     | dyingbleed     | 1        |
+| lhli3          | 1     | lhli3          | 1        |
+| kinsolee       | 1     | lianghao208    | 1        |
+| keqingyuan     | 1     | gyyn           | 1        |
+| hyt05          | 1     | zxb789         | 1        |
+| hanyouqing     | 1     | pefish         | 1        |
+| gyyn           | 1     | cr7258         | 1        |
+| ewth126        | 1     | pengpengfly    | 1        |
+| dyingbleed     | 1     | hbrls          | 1        |
+| KfreeZ         | 1     | zucong         | 1        |
+| Ayden-Franklin | 1     | zhangguanzhang | 1        |
+| 3ks            | 1     |                |          |
+|                | 327   |                | 600      |
+
+### 如何加入 Envoy Sig
+
+* [加入云原生社区](https://mp.weixin.qq.com/s/EwBgyJvGI2ALrVc3b2sB1A)（在问卷中选择 Envoy SIG）
+* 若你已经加入了社区请直接联系 Jimmy，并说明加入 Envoy SIG
