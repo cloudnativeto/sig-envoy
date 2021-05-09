@@ -1,6 +1,6 @@
 # Envoy 官方文档翻译工作总结
 
-Envoy 1.6 官方文档翻译是从 [2020 年 11 月 4 日启动](https://mp.weixin.qq.com/s/NsuQtn391DVFnUOVp_r4OQ) 启动，到 4 月底结束了最后一篇的翻译。前后历经半年，完成了 **327** 篇文档的翻译。共有有 **47** 位同学认领了文档的翻译工作，同时有 **46** 位同学参与了翻译的校对。
+Envoy 1.6 官方文档翻译是从 [2020 年 11 月 4 日启动](https://mp.weixin.qq.com/s/NsuQtn391DVFnUOVp_r4OQ) 启动，到 4 月底结束了最后一篇的翻译。前后历经半年，完成了 **347** 篇文档的翻译。共有有 **47** 位同学认领了文档的翻译工作，同时有 **46** 位同学参与了翻译的校对。
 
 [中文文档](https://cloudnative.to/envoy/)访问地址：https://cloudnative.to/envoy/
 
@@ -20,51 +20,51 @@ Envoy 1.6 官方文档翻译是从 [2020 年 11 月 4 日启动](https://mp.weix
 
 | 参与者            | 翻译文档数 | 审核人员           | 审核的 PR 数 |
 |----------------|-------|----------------|----------|
-| majinghe       | 99    | majinghe       | 124      |
-| addozhang      | 41    | addozhang      | 111      |
-| vgbhfive       | 32    | helight        | 85       |
+| majinghe       | 101   | majinghe       | 124      |
+| addozhang      | 42    | addozhang      | 111      |
+| vgbhfive       | 34    | helight        | 85       |
 | scilla0531     | 25    | scilla0531     | 77       |
-| webup          | 14    | hzliangbin     | 37       |
-| WisWang        | 9     | vgbhfive       | 25       |
-| alandtsang     | 8     | WisWang        | 17       |
-| wujie1993      | 7     | webup          | 10       |
-| li-guest       | 6     | fallingyang    | 9        |
-| kkfinkkfin     | 6     | zhiguo-lu      | 8        |
-| yoyochan7253   | 5     | shenhonglei    | 7        |
+| webup          | 15    | hzliangbin     | 37       |
+| Xunzhuo        | 14    | vgbhfive       | 25       |
+| WisWang        | 9     | WisWang        | 17       |
+| alandtsang     | 8     | webup          | 10       |
+| wujie1993      | 7     | fallingyang    | 9        |
+| kkfinkkfin     | 7     | zhiguo-lu      | 8        |
+| li-guest       | 7     | shenhonglei    | 7        |
 | shenhonglei    | 5     | Miss-you       | 6        |
-| hbrls          | 5     | mars-zhangcong | 6        |
-| baobaoyeye     | 5     | baobaoyeye     | 6        |
-| helight        | 4     | shalk          | 5        |
+| yoyochan7253   | 5     | mars-zhangcong | 6        |
+| hbrls          | 5     | baobaoyeye     | 6        |
+| baobaoyeye     | 5     | shalk          | 5        |
 | Alibner        | 4     | smarkm         | 5        |
-| smarkm         | 3     | lut777         | 5        |
-| mars-zhangcong | 3     | li-guest       | 5        |
-| lianghao208    | 3     | yoyochan7253   | 4        |
-| herbguo        | 3     | wujie1993      | 4        |
-| fallingyang    | 3     | alandtsang     | 4        |
-| Xunzhuo        | 3     | kkfinkkfin     | 3        |
-| zxb789         | 2     | herbguo        | 3        |
-| zhd173         | 2     | Alibner        | 3        |
-| shalk          | 2     | inetkiller     | 3        |
-| redzippo1      | 2     | Ayden-Franklin | 2        |
+| helight        | 4     | lut777         | 5        |
+| smarkm         | 4     | li-guest       | 5        |
+| fallingyang    | 3     | yoyochan7253   | 4        |
+| mars-zhangcong | 3     | wujie1993      | 4        |
+| herbguo        | 3     | alandtsang     | 4        |
+| lianghao208    | 3     | kkfinkkfin     | 3        |
+| shalk          | 2     | herbguo        | 3        |
+| redzippo1      | 2     | Alibner        | 3        |
+| zxb789         | 2     | inetkiller     | 3        |
+| zhd173         | 2     | Ayden-Franklin | 2        |
 | luohua13       | 2     | luohua13       | 2        |
-| llhhbc         | 2     | rootsongjc     | 2        |
-| hustshawn      | 2     | redzippo1      | 2        |
-| cr7258         | 2     | llhhbc         | 2        |
-| bjtuchenmin    | 2     | Xunzhuo        | 2        |
-| zucong         | 1     | zhd173         | 2        |
-| yanxinfire     | 1     | keqingyuan     | 1        |
-| shniu          | 1     | ewth126        | 1        |
-| pengpengfly    | 1     | hustshawn      | 1        |
-| pefish         | 1     | dyingbleed     | 1        |
-| lhli3          | 1     | lhli3          | 1        |
-| kinsolee       | 1     | lianghao208    | 1        |
-| keqingyuan     | 1     | gyyn           | 1        |
-| hyt05          | 1     | zxb789         | 1        |
-| hanyouqing     | 1     | pefish         | 1        |
-| gyyn           | 1     | cr7258         | 1        |
-| ewth126        | 1     | pengpengfly    | 1        |
-| dyingbleed     | 1     | hbrls          | 1        |
-| KfreeZ         | 1     | zucong         | 1        |
-| Ayden-Franklin | 1     | zhangguanzhang | 1        |
-| 3ks            | 1     |                |          |
-|                | 327   |                | 600      |
+| hustshawn      | 2     | rootsongjc     | 2        |
+| llhhbc         | 2     | redzippo1      | 2        |
+| bjtuchenmin    | 2     | llhhbc         | 2        |
+| cr7258         | 2     | Xunzhuo        | 2        |
+| shniu          | 1     | zhd173         | 2        |
+| gyyn           | 1     | keqingyuan     | 1        |
+| keqingyuan     | 1     | ewth126        | 1        |
+| Ayden-Franklin | 1     | hustshawn      | 1        |
+| pengpengfly    | 1     | dyingbleed     | 1        |
+| KfreeZ         | 1     | lhli3          | 1        |
+| ewth126        | 1     | lianghao208    | 1        |
+| yanxinfire     | 1     | gyyn           | 1        |
+| kinsolee       | 1     | zxb789         | 1        |
+| lhli3          | 1     | pefish         | 1        |
+| hanyouqing     | 1     | cr7258         | 1        |
+| dyingbleed     | 1     | pengpengfly    | 1        |
+| 3ks            | 1     | hbrls          | 1        |
+| hyt05          | 1     | zucong         | 1        |
+| pefish         | 1     | zhangguanzhang | 1        |
+| zucong         | 1     |                |          |
+| 文档数            | 347   | 人次             | 600      |
